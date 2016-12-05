@@ -21,10 +21,15 @@ print "Connected to Zabbix API Version %s" % zapi.api_version()
 # Get group data from parameter
 grp = sys.argv[1]
 grpdata = zapi.hostgroup.get(output="extend", groupids=grp)
-grpname = grpdata[0]['name']
-print grp + '     ' + grpname
+if len(sys.argv) == 2:
+    print 'one arg'
+    grpname = grpdata[0]['name'] + ', '
+elif len(sys.argv) == 3:
+    print 'two args'
+    grpname = ''
+
+print grp + '     ' + grpname[:-2]
 # Initializing variables
-unk = 0
 out_list = []
 name_list = []
 yes = set(['yes', 'y', 'ye'])
@@ -43,10 +48,9 @@ for host_list in zapi.host.get(output="extend",
         ip = host_int['ip']
     hhost_new = ip
     if len(name) > 1:
-        hname_new = grpname + ',' + name[1]
+        hname_new = grpname + name[1].strip()
     else:
-        hname_new = grpname + ' неизв ' + unk + ' ' + ip
-        unk += 1
+        hname_new = grpname + 'неизв ' + ip
     if len(group_check[0]['groups']) == 1:
         out_list.append([host_id, hhost_new, hname_new])
         name_list.append(hname_new)
@@ -75,7 +79,7 @@ else:
         # Applying changes
         print ('hostid = ' + out_list[x][0] +
                '\nhostname = ' + out_list[x][1] +
-               '\nvisiblename = ' + out_list[x][2])
+               '\nvisiblename = ' + '"' + out_list[x][2] + '"')
         zapi.host.update(hostid=out_list[x][0],
                          host=out_list[x][1],
                          name=out_list[x][2])
