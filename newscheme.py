@@ -55,10 +55,10 @@ def form_new_names(grpnum):
                                                filter={'type': 2}):
             ip = host_int['ip']
         hhost_new = ip
-        if len(name) == 2:
-            hname_new = grpname + name[1].strip()
-        else:
+        if (len(name) == 1 or name[1].strip() == ''):
             hname_new = grpname + 'неизв ' + str(host_id)
+        else:
+            hname_new = grpname + name[1].strip()
         if len(group_check[0]['groups']) == 1:
             out_list.append([host_id, hhost_new, hname_new])
         else:
