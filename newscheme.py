@@ -18,68 +18,88 @@ passw = base64.b64decode(passw[0].rstrip())
 zapi = ZabbixAPI("http://monitor.st65.ru")
 zapi.login("i.kim", passw)
 print "Connected to Zabbix API Version %s" % zapi.api_version()
-# Get group data from parameter
-grp = sys.argv[1]
-grpdata = zapi.hostgroup.get(output="extend", groupids=grp)
-if len(sys.argv) == 2:
-    print 'one arg'
-    grpname = grpdata[0]['name'] + ', '
-elif len(sys.argv) == 3:
-    print 'two args'
-    grpname = ''
 
-print grp + '     ' + grpname[:-2]
-# Initializing variables
-out_list = []
-name_list = []
-yes = set(['yes', 'y', 'ye'])
-# Filing list out_list with names and host ids
-for host_list in zapi.host.get(output="extend",
-                               groupids=grp):
-    host_id = host_list['hostid']
-# Check if host hast more than 1 group
-    group_check = zapi.host.get(output='hostid',
-                                selectGroups='groupid',
-                                hostids=host_id)
-    name = host_list['name'].split(',', 1)
-    for host_int in zapi.hostinterface.get(output="extend",
-                                           hostids=host_id,
-                                           filter={'type': 2}):
-        ip = host_int['ip']
-    hhost_new = ip
-    if len(name) > 1:
+yes = set(['yes', 'y'])
+
+
+# Get group data from parameter
+def get_group_name(grpnum):
+    grpdata = zapi.hostgroup.get(output="extend", groupids=grpnum)
+    print 'Do you want to use custom or default name for group or skip it?'
+    print 'default : "' + grpdata[0]['name'] + ', " (y,yes/skip/*)'
+    choice = raw_input().lower()
+    if choice in yes:
+        print "Type in your custom name (Don't forget comma and space):"
+        group_name = raw_input()
+    elif choice == 'skip':
+        group_name = ''
+    else:
+        print "Leaving it default."
+        group_name = grpdata[0]['name'] + ', '
+    return group_name
+
+
+# form new names for selected group
+def form_new_names(grpnum):
+    out_list = []
+    # Filing list out_list with names and host ids
+    for host_list in zapi.host.get(output="extend",
+                                   groupids=grpnum):
+        host_id = host_list['hostid']
+        group_check = zapi.host.get(output='hostid',
+                                    selectGroups='groupid',
+                                    hostids=host_id)
+        name = host_list['name'].split(',', 1)
+        for host_int in zapi.hostinterface.get(output="extend",
+                                               hostids=host_id,
+                                               filter={'type': 2}):
+            ip = host_int['ip']
+        hhost_new = ip
         hname_new = grpname + name[1].strip()
-    else:
-        hname_new = grpname + 'неизв ' + ip
-    if len(group_check[0]['groups']) == 1:
-        out_list.append([host_id, hhost_new, hname_new])
-        name_list.append(hname_new)
-    else:
-        # if user wants, script can ignore hosts with > 1 group
-        print ('Host ' + host_list['name'] +
-               ' has more than one group bound to it.')
-        print 'Rewrite anyways? [y,yes,ye/*]:'
-        choice = raw_input().lower()
-        if choice in yes:
-            print "Okay, this one will be changed."
+        if len(group_check[0]['groups']) == 1:
             out_list.append([host_id, hhost_new, hname_new])
-            name_list.append(hname_new)
         else:
-            print "Okay, ignoring it."
-# Checking for duplicate names in output list
-z = [item for item, count in collections.Counter(name_list).items()
-     if count > 1]
-if len(z) > 0:
-    print 'Not applying changes because there are duplicates in names:'
-    for dup in z[0:len(z)]:
-        print dup
+            # if user wants, script can ignore hosts with > 1 group
+            print ('Host ' + host_list['name'] +
+                   ' has more than one group bound to it.')
+            print 'Rewrite anyways? [y,yes,ye/*]:'
+            choice = raw_input().lower()
+            if choice in yes:
+                print "This one will be changed."
+                out_list.append([host_id, hhost_new, hname_new])
+            else:
+                print "Ignoring it."
+    return out_list
+
+def check_name_list(in_list):
+    name_list = []
+    for list_ind in range(0, len(in_list)):
+        name_list.append(in_list[list_ind][1])
+    duplicates = [item for item, count in collections.Counter(name_list).items()
+         if count > 1]
+    return duplicates
+
+if len(sys.argv) == 2:
+    grp = sys.argv[1]
+    grpname = get_group_name(grp)
+    new_list = form_new_names(grp)
+    z = check_name_list(new_list)
+    if len(z) > 0:
+        print 'Not applying changes because there are duplicates in names:'
+        for dup in z[0:len(z)]:
+            print dup
+    else:
+        print "Do you want to deploy changes?(y,yes/*):"
+        deploy = raw_input().lower()
+        for x in range(0, len(new_list)):
+            print ('hostid = ' + new_list[x][0] +
+                   '\nhostname = ' + new_list[x][1] +
+                   '\nvisiblename = ' + '"' + new_list[x][2] + '"')
+        if deploy in yes:
+            print "Deploying changes"
+            for x in range(0, len(out_list)):
+                zapi.host.update(hostid=new_list[x][0],
+                                 host=new_list[x][1],
+                                 name=new_list[x][2])
 else:
-    print 'No duplicates in names.'
-    for x in range(0, len(out_list)):
-        # Applying changes
-        print ('hostid = ' + out_list[x][0] +
-               '\nhostname = ' + out_list[x][1] +
-               '\nvisiblename = ' + '"' + out_list[x][2] + '"')
-        zapi.host.update(hostid=out_list[x][0],
-                         host=out_list[x][1],
-                         name=out_list[x][2])
+    print 'Not enough, or too many arguments (' + str(len(sys.argv)-1) + ')'
