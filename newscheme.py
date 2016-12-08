@@ -93,12 +93,12 @@ if len(sys.argv) == 2:
         for dup in z[0:len(z)]:
             print dup
     else:
-        print "Do you want to deploy changes?(y,yes/*):"
-        deploy = raw_input().lower()
         for x in range(0, len(new_list)):
             print ('hostid = ' + new_list[x][0] +
                    '\nhostname = ' + new_list[x][1] +
                    '\nvisiblename = ' + '"' + new_list[x][2] + '"')
+        print "Do you want to deploy changes?(y,yes/*):"
+        deploy = raw_input().lower()
         if deploy in yes:
             print "Deploying changes"
             for x in range(0, len(new_list)):
