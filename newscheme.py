@@ -71,13 +71,14 @@ def form_new_names(grpnum):
                 print "Ignoring it."
     return out_list
 
+
 def check_name_list(in_list):
     name_list = []
     for list_ind in range(0, len(in_list)):
         name_list.append(in_list[list_ind][1])
-    duplicates = [item for item, count in collections.Counter(name_list).items()
-         if count > 1]
-    return duplicates
+    dups = [item for item, count in collections.Counter(name_list).items()
+            if count > 1]
+    return dups
 
 if len(sys.argv) == 2:
     grp = sys.argv[1]
