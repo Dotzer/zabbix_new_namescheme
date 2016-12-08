@@ -55,7 +55,10 @@ def form_new_names(grpnum):
                                                filter={'type': 2}):
             ip = host_int['ip']
         hhost_new = ip
-        hname_new = grpname + name[1].strip()
+        if len(name) == 2:
+            hname_new = grpname + name[1].strip()
+        else:
+            hname_new = grpname + 'неизв ' + str(host_id)
         if len(group_check[0]['groups']) == 1:
             out_list.append([host_id, hhost_new, hname_new])
         else:
@@ -75,7 +78,7 @@ def form_new_names(grpnum):
 def check_name_list(in_list):
     name_list = []
     for list_ind in range(0, len(in_list)):
-        name_list.append(in_list[list_ind][1])
+        name_list.append(in_list[list_ind][2])
     dups = [item for item, count in collections.Counter(name_list).items()
             if count > 1]
     return dups
@@ -98,7 +101,7 @@ if len(sys.argv) == 2:
                    '\nvisiblename = ' + '"' + new_list[x][2] + '"')
         if deploy in yes:
             print "Deploying changes"
-            for x in range(0, len(out_list)):
+            for x in range(0, len(new_list)):
                 zapi.host.update(hostid=new_list[x][0],
                                  host=new_list[x][1],
                                  name=new_list[x][2])
