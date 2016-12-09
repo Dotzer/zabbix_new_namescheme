@@ -63,8 +63,8 @@ def form_new_names(grpnum):
             out_list.append([host_id, hhost_new, hname_new])
         else:
             # if user wants, script can ignore hosts with > 1 group
-            print ('Host ' + host_list['name'] +
-                   ' has more than one group bound to it.')
+            print ('Host "' + host_list['name'] +
+                   '" has more than one group bound to it.')
             print 'Rewrite anyways? [y,yes,ye/*]:'
             choice = raw_input().lower()
             if choice in yes:
